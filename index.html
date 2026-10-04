@@ -67,7 +67,9 @@ select.field{width:auto;height:46px;padding:0 12px}
 .stats h2{font-size:34px;margin:0 0 6px}
 .stats p{color:var(--muted);margin:0 0 6px}
 @media(max-width:720px){.hero{padding:50px 0 28px}.main-card{padding:16px}.privacy-pill{font-size:11px;max-width:210px;line-height:1.3}.card3d{padding:26px 18px}}
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px}
+.keybox{margin-top:12px;display:grid;gap:10px}
+.keyrow{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
 .mode{display:block;padding:14px 16px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:var(--bg);font-size:13px;line-height:1.5;color:var(--muted);transition:border-color .2s}
 .mode.on{border-color:var(--accent)}
 .mode b{display:block;color:var(--text);font-size:14px;margin-bottom:2px}
@@ -99,6 +101,13 @@ select.field{width:auto;height:46px;padding:0 12px}
   <div class="modes">
     <label class="mode on"><input type="radio" name="mode" value="smart" checked><b>Smart · instant</b>Scores every term by importance and builds definition and fill-in-the-blank cards. Works on any device, even offline.</label>
     <label class="mode" id="aiMode"><input type="radio" name="mode" value="ai"><b>AI · on your device</b><span id="aiNote">A small AI model runs inside your browser. Free and private, but about 1 GB to download the first time. Needs desktop Chrome or Edge.</span></label>
+    <label class="mode"><input type="radio" name="mode" value="cloud"><b>Cloud AI · your own key</b>Best card quality. Uses a free Gemini, Groq, or OpenRouter key that stays in your browser. For personal use.</label>
+  </div>
+
+  <div class="keybox hidden" id="keybox">
+    <div class="keyrow"><select id="provider" class="field"><option value="gemini">Gemini (free tier)</option><option value="groq">Groq (free tier)</option><option value="openrouter">OpenRouter (free models)</option></select><input id="model" class="field" spellcheck="false" placeholder="model name"></div>
+    <input id="apikey" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your API key">
+    <p class="small" style="margin:0"><label><input type="checkbox" id="remember"> Remember on this device</label><br>Your key is saved only in this browser, never in the page's code. Free tiers can use what you send to improve their models, so only paste your own notes. Your account has to meet the provider's age rules.</p>
   </div>
 
   <div class="section">
@@ -242,6 +251,61 @@ async function aiCards(text, n) {
   if (!cards.length) throw new Error("The AI returned no usable cards.");
   return cards;
 }
+/* ---------- cloud AI (your own free key) ---------- */
+const PROVIDERS = {
+  gemini: { name: "Gemini", model: "gemini-3.5-flash-lite", max: 120000 },
+  groq: { name: "Groq", model: "openai/gpt-oss-120b", base: "https://api.groq.com/openai/v1", max: 18000 },
+  openrouter: { name: "OpenRouter", model: "openrouter/free", base: "https://openrouter.ai/api/v1", max: 40000 }
+};
+const CLOUD_SYS = `You write flashcards from study material. Reply with JSON only: {"cards":[{"term":"key term","q":"question","a":"answer"}]}. Each card tests one key term or idea. "term" is the key term (1-4 words). Questions must make sense on their own. Answers are at most 25 words. Use only facts from the material, spread across the whole text.`;
+function loadCloud() {
+  const s = JSON.parse(localStorage.getItem("jk_cloud") || sessionStorage.getItem("jk_cloud") || "{}");
+  if (s.provider) $("provider").value = s.provider;
+  $("model").value = s.model || PROVIDERS[$("provider").value].model;
+  $("apikey").value = s.key || ""; $("remember").checked = !!localStorage.getItem("jk_cloud");
+}
+function saveCloud() {
+  localStorage.removeItem("jk_cloud"); sessionStorage.removeItem("jk_cloud");
+  const v = JSON.stringify({ provider: $("provider").value, model: $("model").value.trim(), key: $("apikey").value.trim() });
+  ($("remember").checked ? localStorage : sessionStorage).setItem("jk_cloud", v);
+}
+$("provider").onchange = () => { $("model").value = PROVIDERS[$("provider").value].model; };
+loadCloud();
+
+async function cloudCards(text, n) {
+  const p = $("provider").value, cfg = PROVIDERS[p], key = $("apikey").value.trim(), model = $("model").value.trim() || cfg.model;
+  if (!key) throw new Error("Paste your " + cfg.name + " API key first.");
+  saveCloud();
+  const body = text.slice(0, cfg.max), { w } = analyze(body);
+  setStatus("Asking " + cfg.name + "..." + (text.length > cfg.max ? " (using the first " + cfg.max.toLocaleString() + " characters)" : ""));
+  const prompt = `Write ${n} flashcards from this material, covering the most important terms and ideas:\n\n${body}`;
+  let raw, r, d;
+  try {
+    if (p === "gemini") {
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: CLOUD_SYS }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: .2, responseMimeType: "application/json" } }) });
+      d = await r.json().catch(() => ({}));
+      raw = (((d.candidates || [])[0] || {}).content || { parts: [] }).parts.map(x => x.text || "").join("");
+    } else {
+      r = await fetch(cfg.base + "/chat/completions", {
+        method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + key },
+        body: JSON.stringify({ model, temperature: .2, messages: [{ role: "system", content: CLOUD_SYS }, { role: "user", content: prompt }] }) });
+      d = await r.json().catch(() => ({}));
+      raw = (((d.choices || [])[0] || {}).message || {}).content || "";
+    }
+  } catch (e) { throw new Error("Couldn't reach " + cfg.name + ". Check your connection, or the provider may block browser requests."); }
+  if (!r.ok) { const m = d.error && (d.error.message || d.error); throw new Error(typeof m === "string" ? m : "Error " + r.status); }
+  const s = raw.replace(/```json|```/g, ""), a = s.indexOf("["), o = s.indexOf("{");
+  let arr;
+  try {
+    const j = JSON.parse(a >= 0 && (o < 0 || a < o) ? s.slice(a, s.lastIndexOf("]") + 1) : s.slice(o, s.lastIndexOf("}") + 1));
+    arr = Array.isArray(j) ? j : j.cards;
+  } catch (e) { throw new Error("Couldn't read the AI's response. Try again."); }
+  const cards = (arr || []).filter(c => c && c.q && c.a).map(c => ({ q: String(c.q), a: String(c.a), ctx: null, sc: termScore(String(c.term || c.q), w) }));
+  if (!cards.length) throw new Error("No cards came back.");
+  return cards;
+}
 /* ---------- end engine ---------- */
 
 function setStatus(msg, bad) { $("status").textContent = msg; $("status").className = bad ? "bad" : ""; }
@@ -252,6 +316,7 @@ if (!hasGPU) { $("aiMode").style.opacity = .45; $("aiNote").textContent = "Not s
 document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = () => {
   if (r.value === "ai" && !hasGPU) { document.querySelector('input[value=smart]').checked = true; }
   document.querySelectorAll(".mode").forEach(m => m.classList.toggle("on", m.querySelector("input").checked));
+  $("keybox").classList.toggle("hidden", document.querySelector("input[name=mode]:checked").value !== "cloud");
 });
 
 /* input tabs + file reading */
@@ -290,10 +355,11 @@ $("go").onclick = async () => {
   if (text.length < 200) return setStatus("Add more material first (a few paragraphs).", true);
   text = text.slice(0, MAX_CHARS);
   const mode = document.querySelector("input[name=mode]:checked").value, n = +$("count").value;
-  $("go").disabled = true; setStatus(mode === "ai" ? "Starting the on-device AI..." : "Scoring your material...");
+  $("go").disabled = true; setStatus(mode === "ai" ? "Starting the on-device AI..." : mode === "cloud" ? "Asking the AI..." : "Scoring your material...");
   try {
     let cards;
-    if (mode === "ai") {
+    if (mode === "cloud") cards = await cloudCards(text, n);
+    else if (mode === "ai") {
       try { cards = await aiCards(text, n); }
       catch (e) { setStatus("AI mode didn't work here (" + e.message + "). Using Smart mode instead.", true); cards = smartCards(text, n); }
     } else cards = smartCards(text, n);
