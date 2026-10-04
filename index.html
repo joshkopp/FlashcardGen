@@ -4,326 +4,1843 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#09090b">
+
 <title>JK - Flashcard Generator</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
 <style>
-:root{--bg:#09090b;--panel:#111114;--text:#f4f4f5;--muted:#a1a1aa;--line:#27272a;--accent:#b8f36b;--danger:#f28d8d;--max:1080px}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;line-height:1.65;overflow-x:hidden}
-.glow{position:fixed;width:420px;height:420px;border-radius:50%;background:#9be34a;filter:blur(150px);opacity:.10;right:2%;top:8%;pointer-events:none;z-index:-1}
-.wrap{width:min(var(--max),calc(100% - 40px));margin:auto}
-header{position:sticky;top:0;z-index:10;background:rgba(9,9,11,.82);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.07)}
-nav{height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-.brand{font-family:"Space Grotesk",sans-serif;font-weight:700;letter-spacing:-.04em}
-.brand span{color:var(--accent)}
-.privacy-pill{display:flex;align-items:center;gap:8px;padding:7px 13px;border-radius:99px;color:#d4d4d8;border:1px solid var(--line);font-size:12px}
-.privacy-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(184,243,107,.55)}
-.hero{padding:70px 0 36px}
-.eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700}
-h1,h2{font-family:"Space Grotesk",sans-serif;letter-spacing:-.055em;line-height:1.08}
-h1{font-size:clamp(40px,7vw,72px);max-width:850px;margin:20px 0}
-h1 span{color:#9b9ba4}
-.hero p{max-width:600px;margin:0;color:var(--muted);font-size:17px}
-.main-card{padding:24px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,#151518,#0e0e10)}
-.label{display:block;margin:0 0 8px;font-size:12px;color:var(--muted);letter-spacing:.04em}
-.field{width:100%;height:50px;padding:0 16px;border:1px solid var(--line);border-radius:12px;outline:none;background:var(--bg);color:var(--text);font:15px "DM Sans",sans-serif;transition:border-color .2s,box-shadow .2s}
-textarea.field{height:200px;padding:16px 18px;line-height:1.6;resize:vertical}
-.field:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(184,243,107,.07)}
-.field::placeholder{color:#62626a}
-.small{font-size:12px;color:var(--muted);margin:8px 0 0}
-.small label{cursor:pointer}
-.small a{color:var(--accent);cursor:pointer}
-.section{margin-top:22px}
-.tabs{display:flex;gap:8px;margin-bottom:14px}
-.tab{padding:9px 16px;border:1px solid var(--line);border-radius:99px;background:transparent;color:var(--muted);font:600 13px "DM Sans",sans-serif;cursor:pointer}
-.tab.on{color:var(--bg);background:var(--accent);border-color:var(--accent)}
-#drop{border:1px dashed #3b3b40;border-radius:12px;padding:46px 20px;text-align:center;color:var(--muted);cursor:pointer;background:var(--bg);transition:.2s}
-#drop.over,#drop:hover{border-color:var(--accent);color:var(--accent)}
-.row{display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
-select.field{width:auto;height:46px;padding:0 12px}
-.btn{height:46px;padding:0 24px;border:0;border-radius:10px;background:var(--accent);color:#0b0f05;font:700 14px "DM Sans",sans-serif;cursor:pointer}
-.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
-.btn.miss{background:rgba(242,141,141,.14);color:var(--danger);border:1px solid rgba(242,141,141,.3)}
-.btn:disabled{opacity:.4;cursor:wait}
-#status{color:var(--muted);font-size:13px}
-#status.bad{color:var(--danger)}
-.hidden{display:none}
-.deck-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}
-.progress{height:6px;margin:12px 0 18px;overflow:hidden;border-radius:99px;background:#202024}
-.progress-fill{height:100%;width:0;border-radius:inherit;background:var(--accent);transition:width .3s ease}
-.card3d{min-height:260px;padding:34px 30px;display:flex;flex-direction:column;justify-content:center;text-align:center;border:1px solid var(--line);border-radius:16px;background:var(--panel);cursor:pointer;transition:border-color .2s}
-.card3d:hover{border-color:#62624e}
-.card3d.back{border-color:rgba(184,243,107,.4);background:radial-gradient(ellipse at top right,#20251a 0%,#111114 60%)}
-.side{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:14px}
-.ctext{font-family:"Space Grotesk",sans-serif;font-size:clamp(20px,3.2vw,28px);letter-spacing:-.03em;line-height:1.3}
-.hint{margin-top:18px;font-size:12px;color:#62626a}
-.grade{display:flex;gap:12px;justify-content:center;margin-top:16px}
-.stats{text-align:center;padding:30px 10px}
-.stats h2{font-size:34px;margin:0 0 6px}
-.stats p{color:var(--muted);margin:0 0 6px}
-@media(max-width:720px){.hero{padding:50px 0 28px}.main-card{padding:16px}.privacy-pill{font-size:11px;max-width:210px;line-height:1.3}.card3d{padding:26px 18px}}
-.btn.sm{height:36px;padding:0 14px}
-.meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:14px}
-#stars{color:var(--accent);letter-spacing:2px}
-.ctx{margin-top:16px;font-size:13px;color:var(--muted);font-style:italic}
+:root{
+  --bg:#09090b;
+  --panel:#111114;
+  --text:#f4f4f5;
+  --muted:#a1a1aa;
+  --line:#27272a;
+  --accent:#b8f36b;
+  --danger:#f28d8d;
+  --max:1080px;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"DM Sans",sans-serif;
+  line-height:1.65;
+  overflow-x:hidden;
+}
+
+.glow{
+  position:fixed;
+  width:420px;
+  height:420px;
+  border-radius:50%;
+  background:#9be34a;
+  filter:blur(150px);
+  opacity:.10;
+  right:2%;
+  top:8%;
+  pointer-events:none;
+  z-index:-1;
+}
+
+.wrap{
+  width:min(var(--max),calc(100% - 40px));
+  margin:auto;
+}
+
+header{
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:rgba(9,9,11,.82);
+  backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+
+nav{
+  height:68px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+}
+
+.brand{
+  font-family:"Space Grotesk",sans-serif;
+  font-weight:700;
+  letter-spacing:-.04em;
+}
+
+.brand span{
+  color:var(--accent);
+}
+
+.privacy-pill{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 13px;
+  border-radius:99px;
+  color:#d4d4d8;
+  border:1px solid var(--line);
+  font-size:12px;
+}
+
+.privacy-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 8px rgba(184,243,107,.55);
+}
+
+.hero{
+  padding:70px 0 36px;
+}
+
+.eyebrow{
+  font-size:12px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--accent);
+  font-weight:700;
+}
+
+h1,h2{
+  font-family:"Space Grotesk",sans-serif;
+  letter-spacing:-.055em;
+  line-height:1.08;
+}
+
+h1{
+  font-size:clamp(40px,7vw,72px);
+  max-width:850px;
+  margin:20px 0;
+}
+
+h1 span{
+  color:#9b9ba4;
+}
+
+.hero p{
+  max-width:600px;
+  margin:0;
+  color:var(--muted);
+  font-size:17px;
+}
+
+.main-card{
+  padding:24px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:linear-gradient(145deg,#151518,#0e0e10);
+}
+
+.label{
+  display:block;
+  margin:0 0 8px;
+  font-size:12px;
+  color:var(--muted);
+  letter-spacing:.04em;
+}
+
+.field{
+  width:100%;
+  height:50px;
+  padding:0 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  outline:none;
+  background:var(--bg);
+  color:var(--text);
+  font:15px "DM Sans",sans-serif;
+  transition:border-color .2s,box-shadow .2s;
+}
+
+textarea.field{
+  height:200px;
+  padding:16px 18px;
+  line-height:1.6;
+  resize:vertical;
+}
+
+.field:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 4px rgba(184,243,107,.07);
+}
+
+.field::placeholder{
+  color:#62626a;
+}
+
+.small{
+  font-size:12px;
+  color:var(--muted);
+  margin:8px 0 0;
+}
+
+.small label{
+  cursor:pointer;
+}
+
+.small a{
+  color:var(--accent);
+  cursor:pointer;
+}
+
+.section{
+  margin-top:22px;
+}
+
+.tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+
+.tab{
+  padding:9px 16px;
+  border:1px solid var(--line);
+  border-radius:99px;
+  background:transparent;
+  color:var(--muted);
+  font:600 13px "DM Sans",sans-serif;
+  cursor:pointer;
+}
+
+.tab.on{
+  color:var(--bg);
+  background:var(--accent);
+  border-color:var(--accent);
+}
+
+#drop{
+  border:1px dashed #3b3b40;
+  border-radius:12px;
+  padding:46px 20px;
+  text-align:center;
+  color:var(--muted);
+  cursor:pointer;
+  background:var(--bg);
+  transition:.2s;
+}
+
+#drop.over,
+#drop:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-top:16px;
+  flex-wrap:wrap;
+}
+
+select.field{
+  width:auto;
+  height:46px;
+  padding:0 12px;
+}
+
+.btn{
+  height:46px;
+  padding:0 24px;
+  border:0;
+  border-radius:10px;
+  background:var(--accent);
+  color:#0b0f05;
+  font:700 14px "DM Sans",sans-serif;
+  cursor:pointer;
+  transition:transform .15s,opacity .15s;
+}
+
+.btn:hover{
+  transform:translateY(-1px);
+}
+
+.btn.ghost{
+  background:transparent;
+  color:var(--text);
+  border:1px solid var(--line);
+}
+
+.btn.miss{
+  background:rgba(242,141,141,.14);
+  color:var(--danger);
+  border:1px solid rgba(242,141,141,.3);
+}
+
+.btn:disabled{
+  opacity:.4;
+  cursor:wait;
+}
+
+#status{
+  color:var(--muted);
+  font-size:13px;
+}
+
+#status.bad{
+  color:var(--danger);
+}
+
+.hidden{
+  display:none !important;
+}
+
+.deck-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.progress{
+  height:6px;
+  margin:12px 0 18px;
+  overflow:hidden;
+  border-radius:99px;
+  background:#202024;
+}
+
+.progress-fill{
+  height:100%;
+  width:0;
+  border-radius:inherit;
+  background:var(--accent);
+  transition:width .3s ease;
+}
+
+.card3d{
+  min-height:300px;
+  padding:34px 30px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--panel);
+  cursor:pointer;
+  transition:border-color .2s,transform .15s;
+  user-select:none;
+}
+
+.card3d:hover{
+  border-color:#62624e;
+  transform:translateY(-1px);
+}
+
+.card3d.back{
+  border-color:rgba(184,243,107,.4);
+  background:radial-gradient(
+    ellipse at top right,
+    #20251a 0%,
+    #111114 60%
+  );
+}
+
+.side{
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--accent);
+  font-weight:700;
+  margin-bottom:14px;
+}
+
+.ctext{
+  font-family:"Space Grotesk",sans-serif;
+  font-size:clamp(20px,3.2vw,28px);
+  letter-spacing:-.03em;
+  line-height:1.3;
+}
+
+.hint{
+  margin-top:18px;
+  font-size:12px;
+  color:#62626a;
+}
+
+.grade{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  margin-top:16px;
+}
+
+.stats{
+  text-align:center;
+  padding:30px 10px;
+}
+
+.stats h2{
+  font-size:34px;
+  margin:0 0 6px;
+}
+
+.stats p{
+  color:var(--muted);
+  margin:0 0 6px;
+}
+
+.btn.sm{
+  height:36px;
+  padding:0 14px;
+}
+
+@media(max-width:720px){
+
+  .hero{
+    padding:50px 0 28px;
+  }
+
+  .main-card{
+    padding:16px;
+  }
+
+  .privacy-pill{
+    font-size:11px;
+    max-width:210px;
+    line-height:1.3;
+  }
+
+  .card3d{
+    padding:26px 18px;
+    min-height:260px;
+  }
+
+  .grade{
+    flex-direction:column;
+  }
+
+  .grade .btn{
+    width:100%;
+  }
+}
 </style>
 </head>
+
 <body>
+
 <div class="glow"></div>
-<header><div class="wrap"><nav>
-  <div class="brand">JK<span>.</span></div>
-  <div class="privacy-pill"><span class="privacy-dot"></span>Powered by Cloudflare AI · no API key needed</div>
-</nav></div></header>
+
+<header>
+  <div class="wrap">
+    <nav>
+      <div class="brand">JK<span>.</span></div>
+
+      <div class="privacy-pill">
+        <span class="privacy-dot"></span>
+        Powered by Cloudflare AI · no API key needed
+      </div>
+    </nav>
+  </div>
+</header>
 
 <div class="wrap">
+
 <section class="hero">
+
   <div class="eyebrow">Study Intelligence</div>
-  <h1>Turn anything you're reading<br><span>into flashcards.</span></h1>
-  <p>Paste notes or upload a PDF, Word doc, or text file. Every term is scored by how much it matters, so the important ones get drilled until you actually know them.</p>
+
+  <h1>
+    Turn anything you're reading
+    <br>
+    <span>into flashcards.</span>
+  </h1>
+
+  <p>
+    Paste notes or upload a PDF, Word doc, or text file.
+    AI turns your material into focused flashcards for studying.
+  </p>
+
 </section>
 
 <main class="main-card">
- <div id="setup">
-  <label class="label" for="code">Access code</label>
-  <input id="code" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Your private access code">
-  <p class="small">Your text is sent to Cloudflare's AI through your own private server, so only paste your own notes.</p>
+
+<!-- ================= SETUP ================= -->
+
+<div id="setup">
+
+  <label class="label" for="code">
+    Access code
+  </label>
+
+  <input
+    id="code"
+    class="field"
+    type="password"
+    autocomplete="off"
+    spellcheck="false"
+    placeholder="Your private access code"
+  >
+
+  <p class="small">
+    Your text is sent to Cloudflare's AI through your own private server,
+    so only paste your own notes.
+  </p>
 
   <div class="section">
-    <div class="tabs"><button class="tab on" data-tab="paste">Paste text</button><button class="tab" data-tab="upload">Upload file</button></div>
-    <div id="pastePane"><textarea id="material" class="field" spellcheck="false" placeholder="Paste your notes, textbook section, or article here..."></textarea></div>
-    <div id="uploadPane" class="hidden">
-      <div id="drop">Drop a .pdf, .docx, .txt, or .md here or click to choose<input id="file" type="file" accept=".pdf,.docx,.txt,.md" hidden></div>
-      <p class="small" id="fileInfo"></p>
+
+    <div class="tabs">
+
+      <button
+        class="tab on"
+        data-tab="paste"
+      >
+        Paste text
+      </button>
+
+      <button
+        class="tab"
+        data-tab="upload"
+      >
+        Upload file
+      </button>
+
     </div>
+
+    <div id="pastePane">
+
+      <textarea
+        id="material"
+        class="field"
+        spellcheck="false"
+        placeholder="Paste your notes, textbook section, or article here..."
+      ></textarea>
+
+    </div>
+
+    <div id="uploadPane" class="hidden">
+
+      <div id="drop">
+
+        Drop a .pdf, .docx, .txt, or .md here
+        or click to choose
+
+        <input
+          id="file"
+          type="file"
+          accept=".pdf,.docx,.txt,.md"
+          hidden
+        >
+
+      </div>
+
+      <p class="small" id="fileInfo"></p>
+
+    </div>
+
   </div>
 
   <div class="row">
-    <select id="count" class="field"><option>10</option><option selected>15</option><option>25</option><option>40</option></select>
-    <span class="small" style="margin:0">cards</span>
-    <button class="btn" id="go">Generate flashcards</button>
-    <span id="status"></span>
-  </div>
-  <div class="progress hidden" id="genProg"><div class="progress-fill" id="genFill"></div></div>
- </div>
 
- <div id="study" class="hidden">
-  <div class="deck-top"><span id="pos"></span><span><button class="btn ghost sm" id="restart">Restart</button> <button class="btn ghost sm" id="copy">Copy for Anki</button> <button class="btn ghost sm" id="newDeck">New deck</button></span></div>
-  <div class="progress"><div class="progress-fill" id="bar"></div></div>
-  <div id="playArea">
-    <div class="card3d" id="card">
-      <div class="meta"><span id="stars"></span><span id="need"></span></div>
-      <div class="side" id="side"></div><div class="ctext" id="ctext"></div><div class="ctx" id="ctx"></div>
-      <div class="hint">Click, or press Space, to flip · harder terms need more right answers to count as learned</div>
-    </div>
-    <div class="grade hidden" id="grade"><button class="btn miss" id="missBtn">✗ Missed it</button><button class="btn" id="gotBtn">✓ Got it</button></div>
+    <select id="count" class="field">
+
+      <option>10</option>
+      <option selected>15</option>
+      <option>25</option>
+      <option>40</option>
+
+    </select>
+
+    <span class="small" style="margin:0">
+      cards
+    </span>
+
+    <button class="btn" id="go">
+      Generate flashcards
+    </button>
+
+    <span id="status"></span>
+
   </div>
-  <div id="done" class="stats hidden"><h2 id="doneTitle"></h2><p id="doneSub"></p><div id="hard" class="small"></div>
-    <div class="row" style="justify-content:center"><button class="btn" id="restart2">Study again</button><button class="btn ghost" id="new2">New deck</button></div></div>
- </div>
-</main>
-<p class="small" style="text-align:center;margin:26px 0 40px">© <span id="year"></span> Josh Koppanalil · JK Study</p>
+
+  <div class="progress hidden" id="genProg">
+    <div class="progress-fill" id="genFill"></div>
+  </div>
+
 </div>
 
+
+<!-- ================= STUDY ================= -->
+
+<div id="study" class="hidden">
+
+  <div class="deck-top">
+
+    <span id="pos"></span>
+
+    <span>
+
+      <button
+        class="btn ghost sm"
+        id="restart"
+      >
+        Restart
+      </button>
+
+      <button
+        class="btn ghost sm"
+        id="newDeck"
+      >
+        New deck
+      </button>
+
+    </span>
+
+  </div>
+
+  <div class="progress">
+
+    <div
+      class="progress-fill"
+      id="bar"
+    ></div>
+
+  </div>
+
+  <div id="playArea">
+
+    <div
+      class="card3d"
+      id="card"
+    >
+
+      <div
+        class="side"
+        id="side"
+      ></div>
+
+      <div
+        class="ctext"
+        id="ctext"
+      ></div>
+
+      <div class="hint">
+        Click the card to flip
+      </div>
+
+    </div>
+
+    <div
+      class="grade"
+      id="grade"
+    >
+
+      <!-- Available before flipping -->
+      <button
+        class="btn miss"
+        id="missBtn"
+      >
+        ✗ Don't know
+      </button>
+
+      <!-- Only appears after flipping -->
+      <button
+        class="btn hidden"
+        id="gotBtn"
+      >
+        ✓ Know it
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================= DONE ================= -->
+
+  <div
+    id="done"
+    class="stats hidden"
+  >
+
+    <h2 id="doneTitle"></h2>
+
+    <p id="doneSub"></p>
+
+    <div
+      class="row"
+      style="justify-content:center"
+    >
+
+      <button
+        class="btn"
+        id="restart2"
+      >
+        Study again
+      </button>
+
+      <button
+        class="btn ghost"
+        id="new2"
+      >
+        New deck
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+</main>
+
+<p
+  class="small"
+  style="text-align:center;margin:26px 0 40px"
+>
+  © <span id="year"></span> Josh Koppanalil · JK Study
+</p>
+
+</div>
+
+
 <script>
+
+/* =========================================================
+   BASIC SETUP
+========================================================= */
+
 const $ = id => document.getElementById(id);
+
 $("year").textContent = new Date().getFullYear();
-if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+
 const MAX_CHARS = 120000;
 
-/* ---------- importance engine ---------- */
-const STOP = new Set("a an the and or but if then than that this these those of in on at to for from by with as is are was were be been being it its into over under about between during before after not no nor so such can could may might must shall should will would do does did have has had which who whom whose what when where why how also more most other some any each both few many much very just only own same too their there they them his her he she we you your our us".split(" "));
-const words = s => (s.toLowerCase().match(/[a-z][a-z'-]{2,}/g) || []).filter(w => !STOP.has(w));
-const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-const DEF = /^(.{3,70}?)\s+(is|are|refers to|means|is defined as|are defined as|is called|are called)\s+(.{12,})$/;
-const rawSents = t => t.replace(/\s+/g, " ").split(/(?<=[.!?])\s+/).filter(s => s.trim());
-const splitSentences = t => rawSents(t).filter(s => s.length >= 30 && s.length <= 300);
 
-function analyze(text) {
-  const sents = splitSentences(text), tf = new Map(), sp = new Map(), boost = new Map();
+/* =========================================================
+   TEXT ANALYSIS
+========================================================= */
+
+const STOP = new Set(
+  "a an the and or but if then than that this these those of in on at to for from by with as is are was were be been being it its into over under about between during before after not no nor so such can could may might must shall should will would do does did have has had which who whom whose what when where why how also more most other some any each both few many much very just only own same too their there they them his her he she we you your our us"
+  .split(" ")
+);
+
+const words = s =>
+  (
+    s.toLowerCase().match(/[a-z][a-z'-]{2,}/g) || []
+  ).filter(w => !STOP.has(w));
+
+const rawSents = t =>
+  t
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .filter(s => s.trim());
+
+const splitSentences = t =>
+  rawSents(t).filter(
+    s => s.length >= 30 && s.length <= 300
+  );
+
+function analyze(text){
+
+  const sents = splitSentences(text);
+
+  const tf = new Map();
+  const sp = new Map();
+
   sents.forEach(s => {
+
     const ws = words(s);
-    ws.forEach(w => tf.set(w, (tf.get(w) || 0) + 1));
-    new Set(ws).forEach(w => sp.set(w, (sp.get(w) || 0) + 1));
-    s.split(" ").slice(1).forEach(tok => {            // capitalized mid-sentence = probably a named term
-      if (/^[A-Z][a-z]{3,}/.test(tok)) { const k = tok.toLowerCase().replace(/[^a-z]/g, ""); boost.set(k, (boost.get(k) || 1) * 1.3); }
+
+    ws.forEach(w => {
+      tf.set(w,(tf.get(w) || 0) + 1);
     });
-    const m = s.match(DEF);                            // subjects of definitions matter more
-    if (m && m[1].split(" ").length <= 6) words(m[1]).forEach(k => boost.set(k, Math.max(boost.get(k) || 1, 1.8)));
+
+    new Set(ws).forEach(w => {
+      sp.set(w,(sp.get(w) || 0) + 1);
+    });
+
   });
+
   const w = new Map();
-  tf.forEach((c, t) => w.set(t, Math.log(1 + c) * (1 + .5 * Math.log(1 + sp.get(t))) * Math.min(boost.get(t) || 1, 2.5)));
-  return { sents, w };
-}
-const termScore = (str, w) => { const v = words(str).map(x => w.get(x) || 0).sort((a, b) => b - a).slice(0, 3); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
 
-function assignStars(cards) {                          // rank by importance: top 20% = 5 stars ... bottom 20% = 1 star
-  cards.map((c, i) => i).sort((a, b) => cards[b].sc - cards[a].sc)
-    .forEach((ci, r) => { cards[ci].stars = 5 - Math.min(4, Math.floor(r / cards.length * 5)); });
-}
-/* ---------- cloud AI through your Worker (Cloudflare Workers AI) ---------- */
-const AI_URL = "https://jk-flashcards-ai.josh-koppanalil.workers.dev";   // <- paste your Worker's address here
-const CLOUD_SYS = `You write flashcards from study text. Reply with JSON only, no other text: {"cards":[{"term":"key term","q":"question","a":"answer"}]}. Each card tests one key term or idea. "term" is the key term (1-4 words). Questions must make sense on their own. Answers are at most 25 words. Use only facts from the text.`;
-const MAX_SECTIONS = 6;
-$("code").value = localStorage.getItem("jk_code") || "";
+  tf.forEach((c,t) => {
 
-function chunkText(t, size = 5000) {                  // small free models, so work in small sections
-  const parts = t.replace(/\r/g, "").split(/\n\s*\n|(?<=[.!?])\s+/), out = [];
-  let cur = "";
-  parts.forEach(p => { if (cur && (cur + " " + p).length > size) { out.push(cur); cur = ""; } cur = cur ? cur + " " + p : p; });
-  if (cur) out.push(cur);
-  return out.map(c => c.slice(0, size + 1000));
-}
-function parseCards(raw) {
-  const s = raw.replace(/```json|```/g, ""), a = s.indexOf("["), o = s.indexOf("{");
-  const j = JSON.parse(a >= 0 && (o < 0 || a < o) ? s.slice(a, s.lastIndexOf("]") + 1) : s.slice(o, s.lastIndexOf("}") + 1));
-  return (Array.isArray(j) ? j : j.cards) || [];
+    w.set(
+      t,
+      Math.log(1 + c) *
+      (1 + .5 * Math.log(1 + sp.get(t)))
+    );
+
+  });
+
+  return {
+    sents,
+    w
+  };
 }
 
-async function cloudCards(text, n) {
-  if (AI_URL.includes("YOUR-WORKER")) throw new Error("Set AI_URL near the top of the script to your Worker's address.");
-  const code = $("code").value.trim();
-  if (!code) throw new Error("Enter your access code first.");
-  localStorage.setItem("jk_code", code);
-  const body = text.slice(0, MAX_CHARS), { w } = analyze(body);
-  let chunks = chunkText(body);
-  if (chunks.length > MAX_SECTIONS)                    // keep sections spread across the whole document
-    chunks = Array.from({ length: MAX_SECTIONS }, (_, i) => chunks[Math.round(i * (chunks.length - 1) / (MAX_SECTIONS - 1))]);
-  const per = Math.max(2, Math.min(6, Math.round(n / chunks.length)));
-  let cards = [], lastErr = "";
-  for (let i = 0; i < chunks.length; i++) {
-    setStatus(`Writing cards: section ${i + 1} of ${chunks.length}...`);
-    let r, d;
-    try {
-      r = await fetch(AI_URL, { method: "POST", headers: { "content-type": "application/json", "x-access-code": code },
-        body: JSON.stringify({ system: CLOUD_SYS, prompt: `Write ${per} flashcards from this text:\n\n${chunks[i]}`, maxTokens: 900 }) });
-      d = await r.json().catch(() => ({}));
-    } catch (e) { throw new Error("Couldn't reach your server. Check AI_URL and that the Worker is deployed."); }
-    if (!r.ok) {
-      if ([401, 403, 429].includes(r.status)) throw new Error(d.error || "Error " + r.status);   // stop on auth or quota problems
-      lastErr = d.error || "Error " + r.status; continue;
+const termScore = (str,w) => {
+
+  const v = words(str)
+    .map(x => w.get(x) || 0)
+    .sort((a,b) => b-a)
+    .slice(0,3);
+
+  return v.length
+    ? v.reduce((a,b) => a+b,0) / v.length
+    : 0;
+
+};
+
+
+/* =========================================================
+   CLOUDFLARE AI
+========================================================= */
+
+const AI_URL =
+  "https://jk-flashcards-ai.josh-koppanalil.workers.dev";
+
+const CLOUD_SYS = `
+You write flashcards from study text.
+
+Reply with JSON only, no other text:
+
+{
+  "cards": [
+    {
+      "term": "key term",
+      "q": "question",
+      "a": "answer"
     }
-    try {
-      parseCards(d.text || "").forEach(c => { if (c && c.q && c.a) cards.push({ q: String(c.q), a: String(c.a), ctx: null, sc: termScore(String(c.term || c.q), w) }); });
-    } catch (e) { lastErr = "Couldn't read the AI's response."; }
+  ]
+}
+
+Rules:
+
+- Each card tests one key term or idea.
+- term should be 1-4 words.
+- Questions must make sense on their own.
+- Answers should be concise and accurate.
+- Answers should be at most 25 words.
+- Use only facts from the supplied text.
+- Avoid duplicate cards.
+`;
+
+const MAX_SECTIONS = 6;
+
+$("code").value =
+  localStorage.getItem("jk_code") || "";
+
+
+/* =========================================================
+   TEXT CHUNKING
+========================================================= */
+
+function chunkText(t,size=5000){
+
+  const parts = t
+    .replace(/\r/g,"")
+    .split(/\n\s*\n|(?<=[.!?])\s+/);
+
+  const out = [];
+
+  let cur = "";
+
+  parts.forEach(p => {
+
+    if(
+      cur &&
+      (cur + " " + p).length > size
+    ){
+      out.push(cur);
+      cur = "";
+    }
+
+    cur = cur
+      ? cur + " " + p
+      : p;
+
+  });
+
+  if(cur){
+    out.push(cur);
   }
-  if (!cards.length) throw new Error(lastErr || "No cards came back.");
-  if (cards.length > n) cards = cards.sort((a, b) => b.sc - a.sc).slice(0, n);   // keep the most important ones
+
+  return out.map(
+    c => c.slice(0,size + 1000)
+  );
+}
+
+
+/* =========================================================
+   PARSE AI RESPONSE
+========================================================= */
+
+function parseCards(raw){
+
+  const s =
+    raw.replace(/```json|```/g,"");
+
+  const a = s.indexOf("[");
+  const o = s.indexOf("{");
+
+  const j = JSON.parse(
+    a >= 0 && (o < 0 || a < o)
+      ? s.slice(a,s.lastIndexOf("]") + 1)
+      : s.slice(o,s.lastIndexOf("}") + 1)
+  );
+
+  return (
+    Array.isArray(j)
+      ? j
+      : j.cards
+  ) || [];
+}
+
+
+/* =========================================================
+   ASK CLOUDFLARE AI
+========================================================= */
+
+async function cloudCards(text,n){
+
+  const code =
+    $("code").value.trim();
+
+  if(!code){
+    throw new Error(
+      "Enter your access code first."
+    );
+  }
+
+  localStorage.setItem(
+    "jk_code",
+    code
+  );
+
+  const body =
+    text.slice(0,MAX_CHARS);
+
+  const {w} =
+    analyze(body);
+
+  let chunks =
+    chunkText(body);
+
+  if(
+    chunks.length >
+    MAX_SECTIONS
+  ){
+
+    chunks = Array.from(
+      {length:MAX_SECTIONS},
+      (_,i) =>
+        chunks[
+          Math.round(
+            i *
+            (chunks.length - 1) /
+            (MAX_SECTIONS - 1)
+          )
+        ]
+    );
+
+  }
+
+  const per =
+    Math.max(
+      2,
+      Math.min(
+        6,
+        Math.round(
+          n / chunks.length
+        )
+      )
+    );
+
+  let cards = [];
+
+  let lastErr = "";
+
+  for(
+    let i = 0;
+    i < chunks.length;
+    i++
+  ){
+
+    setStatus(
+      `Writing cards: section ${i + 1} of ${chunks.length}...`
+    );
+
+    let r;
+    let d;
+
+    try{
+
+      r = await fetch(
+        AI_URL,
+        {
+          method:"POST",
+
+          headers:{
+            "content-type":
+              "application/json",
+
+            "x-access-code":
+              code
+          },
+
+          body:JSON.stringify({
+            system:CLOUD_SYS,
+
+            prompt:
+              `Write ${per} flashcards from this text:\n\n${chunks[i]}`,
+
+            maxTokens:900
+          })
+        }
+      );
+
+      d =
+        await r.json().catch(
+          () => ({})
+        );
+
+    }catch(e){
+
+      throw new Error(
+        "Couldn't reach your server. Check that your Worker is deployed."
+      );
+
+    }
+
+    if(!r.ok){
+
+      if(
+        [401,403,429]
+        .includes(r.status)
+      ){
+
+        throw new Error(
+          d.error ||
+          "Error " + r.status
+        );
+
+      }
+
+      lastErr =
+        d.error ||
+        "Error " + r.status;
+
+      continue;
+    }
+
+    try{
+
+      parseCards(
+        d.text || ""
+      ).forEach(c => {
+
+        if(
+          c &&
+          c.q &&
+          c.a
+        ){
+
+          cards.push({
+            q:String(c.q),
+            a:String(c.a),
+            sc:termScore(
+              String(
+                c.term ||
+                c.q
+              ),
+              w
+            )
+          });
+
+        }
+
+      });
+
+    }catch(e){
+
+      lastErr =
+        "Couldn't read the AI's response.";
+
+    }
+
+  }
+
+  if(!cards.length){
+
+    throw new Error(
+      lastErr ||
+      "No cards came back."
+    );
+
+  }
+
+  /*
+    Remove duplicate questions.
+  */
+
+  const seen = new Set();
+
+  cards = cards.filter(c => {
+
+    const key =
+      c.q
+        .toLowerCase()
+        .trim();
+
+    if(seen.has(key)){
+      return false;
+    }
+
+    seen.add(key);
+
+    return true;
+
+  });
+
+  /*
+    Keep the most relevant cards.
+  */
+
+  if(cards.length > n){
+
+    cards =
+      cards
+        .sort(
+          (a,b) =>
+            b.sc - a.sc
+        )
+        .slice(0,n);
+
+  }
+
   return cards;
 }
-/* ---------- end engine ---------- */
 
-function setStatus(msg, bad) { $("status").textContent = msg; $("status").className = bad ? "bad" : ""; }
 
-/* input tabs + file reading */
+/* =========================================================
+   STATUS
+========================================================= */
+
+function setStatus(msg,bad){
+
+  $("status").textContent =
+    msg;
+
+  $("status").className =
+    bad ? "bad" : "";
+
+}
+
+
+/* =========================================================
+   FILE UPLOADS
+========================================================= */
+
 let fileText = "";
-document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
-  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
-  $("pastePane").classList.toggle("hidden", t.dataset.tab !== "paste");
-  $("uploadPane").classList.toggle("hidden", t.dataset.tab !== "upload");
-});
-const drop = $("drop");
-drop.onclick = () => $("file").click();
-$("file").onchange = e => readFile(e.target.files[0]);
-drop.ondragover = e => { e.preventDefault(); drop.classList.add("over"); };
-drop.ondragleave = () => drop.classList.remove("over");
-drop.ondrop = e => { e.preventDefault(); drop.classList.remove("over"); readFile(e.dataTransfer.files[0]); };
-async function readFile(f) {
-  if (!f) return;
-  $("fileInfo").textContent = "Reading " + f.name + "...";
-  try {
-    const ext = f.name.split(".").pop().toLowerCase();
-    if (ext === "txt" || ext === "md") fileText = await f.text();
-    else if (ext === "docx") fileText = (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value;
-    else if (ext === "pdf") {
-      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise, pages = [];
-      for (let i = 1; i <= pdf.numPages; i++) pages.push((await (await pdf.getPage(i)).getTextContent()).items.map(x => x.str).join(" "));
-      fileText = pages.join("\n\n");
-    } else throw new Error("Use a .pdf, .docx, .txt, or .md file.");
-    if (fileText.trim().length < 100) throw new Error("Couldn't find readable text. Scanned PDFs aren't supported.");
-    $("fileInfo").textContent = `${f.name} loaded (${fileText.length.toLocaleString()} characters).`;
-  } catch (e) { fileText = ""; $("fileInfo").textContent = "Couldn't read that file: " + e.message; }
+
+document
+  .querySelectorAll(".tab")
+  .forEach(t => {
+
+    t.onclick = () => {
+
+      document
+        .querySelectorAll(".tab")
+        .forEach(x =>
+          x.classList.toggle(
+            "on",
+            x === t
+          )
+        );
+
+      $("pastePane")
+        .classList.toggle(
+          "hidden",
+          t.dataset.tab !== "paste"
+        );
+
+      $("uploadPane")
+        .classList.toggle(
+          "hidden",
+          t.dataset.tab !== "upload"
+        );
+
+    };
+
+  });
+
+
+const drop =
+  $("drop");
+
+drop.onclick = () =>
+  $("file").click();
+
+
+$("file").onchange =
+  e =>
+    readFile(
+      e.target.files[0]
+    );
+
+
+drop.ondragover =
+  e => {
+
+    e.preventDefault();
+
+    drop.classList.add(
+      "over"
+    );
+
+  };
+
+
+drop.ondragleave =
+  () =>
+    drop.classList.remove(
+      "over"
+    );
+
+
+drop.ondrop =
+  e => {
+
+    e.preventDefault();
+
+    drop.classList.remove(
+      "over"
+    );
+
+    readFile(
+      e.dataTransfer.files[0]
+    );
+
+  };
+
+
+async function readFile(f){
+
+  if(!f) return;
+
+  $("fileInfo").textContent =
+    "Reading " + f.name + "...";
+
+  try{
+
+    const ext =
+      f.name
+        .split(".")
+        .pop()
+        .toLowerCase();
+
+    if(
+      ext === "txt" ||
+      ext === "md"
+    ){
+
+      fileText =
+        await f.text();
+
+    }
+
+    else if(
+      ext === "docx"
+    ){
+
+      fileText =
+        (
+          await mammoth.extractRawText({
+            arrayBuffer:
+              await f.arrayBuffer()
+          })
+        ).value;
+
+    }
+
+    else if(
+      ext === "pdf"
+    ){
+
+      const pdf =
+        await pdfjsLib
+          .getDocument({
+            data:
+              new Uint8Array(
+                await f.arrayBuffer()
+              )
+          })
+          .promise;
+
+      const pages = [];
+
+      for(
+        let i = 1;
+        i <= pdf.numPages;
+        i++
+      ){
+
+        const page =
+          await pdf.getPage(i);
+
+        const content =
+          await page.getTextContent();
+
+        pages.push(
+          content.items
+            .map(x => x.str)
+            .join(" ")
+        );
+
+      }
+
+      fileText =
+        pages.join("\n\n");
+
+    }
+
+    else{
+
+      throw new Error(
+        "Use a .pdf, .docx, .txt, or .md file."
+      );
+
+    }
+
+    if(
+      fileText.trim().length < 100
+    ){
+
+      throw new Error(
+        "Couldn't find readable text. Scanned PDFs aren't supported."
+      );
+
+    }
+
+    $("fileInfo").textContent =
+      `${f.name} loaded (${fileText.length.toLocaleString()} characters).`;
+
+  }catch(e){
+
+    fileText = "";
+
+    $("fileInfo").textContent =
+      "Couldn't read that file: " +
+      e.message;
+
+  }
+
 }
 
-/* generate */
-$("go").onclick = async () => {
-  let text = ($("uploadPane").classList.contains("hidden") ? $("material").value : fileText).trim();
-  if (text.length < 200) return setStatus("Add more material first (a few paragraphs).", true);
-  text = text.slice(0, MAX_CHARS);
-  const n = +$("count").value;
-  $("go").disabled = true; setStatus("Asking the AI...");
-  try {
-    const cards = await cloudCards(text, n);
-    if (!cards.length) throw new Error("Couldn't find enough material to build cards.");
-    assignStars(cards); startDeck(cards); setStatus("");
-  } catch (e) { setStatus(e.message, true); }
-  finally { $("go").disabled = false; $("genProg").classList.add("hidden"); }
-};
 
-/* study: harder terms need more correct answers, misses come back sooner */
-let deck = [], queue = [], flipped = false, flips = 0, right = 0;
-function startDeck(cards) {
-  deck = cards.map(c => ({ ...c, streak: 0, misses: 0, need: c.stars >= 5 ? 3 : c.stars >= 3 ? 2 : 1 }));
-  $("setup").classList.add("hidden"); $("study").classList.remove("hidden"); restart();
+/* =========================================================
+   GENERATE DECK
+========================================================= */
+
+$("go").onclick =
+  async () => {
+
+    let text =
+      (
+        $("uploadPane")
+          .classList
+          .contains("hidden")
+          ? $("material").value
+          : fileText
+      ).trim();
+
+    if(text.length < 200){
+
+      return setStatus(
+        "Add more material first (a few paragraphs).",
+        true
+      );
+
+    }
+
+    text =
+      text.slice(
+        0,
+        MAX_CHARS
+      );
+
+    const n =
+      +$("count").value;
+
+    $("go").disabled = true;
+
+    setStatus(
+      "Asking the AI..."
+    );
+
+    try{
+
+      const cards =
+        await cloudCards(
+          text,
+          n
+        );
+
+      if(!cards.length){
+
+        throw new Error(
+          "Couldn't find enough material to build cards."
+        );
+
+      }
+
+      startDeck(cards);
+
+      setStatus("");
+
+    }catch(e){
+
+      setStatus(
+        e.message,
+        true
+      );
+
+    }finally{
+
+      $("go").disabled = false;
+
+      $("genProg")
+        .classList
+        .add("hidden");
+
+    }
+
+  };
+
+
+/* =========================================================
+   FLASHCARD STUDY
+========================================================= */
+
+let deck = [];
+let queue = [];
+let flipped = false;
+
+let totalAnswered = 0;
+let correct = 0;
+
+
+/*
+  Start a new deck.
+*/
+
+function startDeck(cards){
+
+  deck =
+    cards.map(c => ({
+      ...c,
+      learned:false,
+      missed:false
+    }));
+
+  $("setup")
+    .classList
+    .add("hidden");
+
+  $("study")
+    .classList
+    .remove("hidden");
+
+  restart();
+
 }
-function restart() {
-  deck.forEach(c => { c.streak = 0; c.misses = 0; });
-  queue = deck.slice().sort((a, b) => b.stars - a.stars); flips = 0; right = 0;
-  $("done").classList.add("hidden"); $("playArea").classList.remove("hidden"); show();
-}
-function updateBar() {
-  const need = deck.reduce((a, c) => a + c.need, 0), got = deck.reduce((a, c) => a + Math.min(c.streak, c.need), 0);
-  $("bar").style.width = (got / need * 100) + "%";
-  $("pos").textContent = `${queue.length} card${queue.length !== 1 ? "s" : ""} left`;
-}
-function show() {
-  if (!queue.length) return finish();
-  flipped = false; const c = queue[0];
-  $("card").classList.remove("back"); $("side").textContent = "Question"; $("ctext").textContent = c.q; $("ctx").textContent = "";
-  $("stars").textContent = "★".repeat(c.stars) + "☆".repeat(5 - c.stars);
-  $("need").textContent = `Learned ${c.streak} of ${c.need}`;
-  $("grade").classList.add("hidden"); updateBar();
-}
-function flip() {
-  if (flipped) return show();
-  flipped = true; const c = queue[0];
-  $("card").classList.add("back"); $("side").textContent = "Answer"; $("ctext").textContent = c.a;
-  $("ctx").textContent = c.ctx ? "“" + c.ctx + "”" : ""; $("grade").classList.remove("hidden");
-}
-function grade(ok) {
-  if (!flipped) return;
-  const c = queue.shift(); flips++;
-  if (ok) { right++; c.streak++; } else { c.streak = 0; c.misses++; }
-  if (c.streak < c.need) queue.splice(Math.min(queue.length, ok ? 5 : 3), 0, c);
+
+
+/*
+  Restart current deck.
+*/
+
+function restart(){
+
+  deck.forEach(c => {
+
+    c.learned = false;
+    c.missed = false;
+
+  });
+
+  queue =
+    deck.slice();
+
+  totalAnswered = 0;
+  correct = 0;
+
+  $("done")
+    .classList
+    .add("hidden");
+
+  $("playArea")
+    .classList
+    .remove("hidden");
+
   show();
+
 }
-function finish() {
-  updateBar(); $("bar").style.width = "100%"; $("pos").textContent = "All terms learned";
-  $("playArea").classList.add("hidden"); $("done").classList.remove("hidden");
-  $("doneTitle").textContent = `${Math.round(right / flips * 100)}% accuracy`;
-  $("doneSub").textContent = `You learned ${deck.length} terms in ${flips} flips.`;
-  const hard = deck.filter(c => c.misses).sort((a, b) => b.misses - a.misses).slice(0, 5);
-  $("hard").textContent = hard.length ? "Trickiest: " + hard.map(c => c.a.length > 40 ? c.q.slice(0, 40) + "…" : c.a).join(" · ") : "";
+
+
+/*
+  Update progress bar.
+*/
+
+function updateBar(){
+
+  const learned =
+    deck.filter(
+      c => c.learned
+    ).length;
+
+  const percent =
+    deck.length
+      ? (learned / deck.length) * 100
+      : 0;
+
+  $("bar").style.width =
+    percent + "%";
+
+  const remaining =
+    queue.length;
+
+  $("pos").textContent =
+    `${remaining} card${
+      remaining !== 1
+        ? "s"
+        : ""
+    } left`;
+
 }
-$("card").onclick = flip;
-$("gotBtn").onclick = () => grade(true);
-$("missBtn").onclick = () => grade(false);
-$("restart").onclick = $("restart2").onclick = restart;
-$("newDeck").onclick = $("new2").onclick = () => { $("study").classList.add("hidden"); $("setup").classList.remove("hidden"); };
-$("copy").onclick = async () => {
-  const tsv = deck.map(c => c.q.replace(/\t|\n/g, " ") + "\t" + c.a.replace(/\t|\n/g, " ")).join("\n");
-  try { await navigator.clipboard.writeText(tsv); $("copy").textContent = "Copied!"; setTimeout(() => $("copy").textContent = "Copy for Anki", 1500); } catch (e) {}
-};
-document.addEventListener("keydown", e => {
-  if ($("study").classList.contains("hidden") || $("playArea").classList.contains("hidden")) return;
-  if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); }
-  else if (e.key === "ArrowRight") grade(true);
-  else if (e.key === "ArrowLeft") grade(false);
-});
+
+
+/*
+  Show current question.
+*/
+
+function show(){
+
+  if(!queue.length){
+
+    finish();
+
+    return;
+  }
+
+  flipped = false;
+
+  const c =
+    queue[0];
+
+  $("card")
+    .classList
+    .remove("back");
+
+  $("side").textContent =
+    "Question";
+
+  $("ctext").textContent =
+    c.q;
+
+  /*
+    Don't know is always available.
+  */
+
+  $("missBtn")
+    .classList
+    .remove("hidden");
+
+  /*
+    Know it only appears after flipping.
+  */
+
+  $("gotBtn")
+    .classList
+    .add("hidden");
+
+  updateBar();
+
+}
+
+
+/*
+  Flip the current card.
+*/
+
+function flip(){
+
+  if(!queue.length)
+    return;
+
+  if(flipped)
+    return;
+
+  flipped = true;
+
+  const c =
+    queue[0];
+
+  $("card")
+    .classList
+    .add("back");
+
+  $("side").textContent =
+    "Answer";
+
+  $("ctext").textContent =
+    c.a;
+
+  /*
+    Now show Know it.
+  */
+
+  $("gotBtn")
+    .classList
+    .remove("hidden");
+
+}
+
+
+/*
+  User doesn't know the answer.
+
+  IMPORTANT:
+  This works without flipping.
+*/
+
+function dontKnow(){
+
+  if(!queue.length)
+    return;
+
+  const c =
+    queue.shift();
+
+  totalAnswered++;
+
+  c.missed = true;
+
+  /*
+    Bring the card back soon.
+  */
+
+  queue.splice(
+    Math.min(
+      2,
+      queue.length
+    ),
+    0,
+    c
+  );
+
+  show();
+
+}
+
+
+/*
+  User knows the answer.
+
+  Only works after flipping.
+*/
+
+function knowIt(){
+
+  if(!flipped)
+    return;
+
+  if(!queue.length)
+    return;
+
+  const c =
+    queue.shift();
+
+  totalAnswered++;
+
+  correct++;
+
+  c.learned = true;
+
+  show();
+
+}
+
+
+/*
+  Finished studying.
+*/
+
+function finish(){
+
+  $("bar").style.width =
+    "100%";
+
+  $("pos").textContent =
+    "All cards complete";
+
+  $("playArea")
+    .classList
+    .add("hidden");
+
+  $("done")
+    .classList
+    .remove("hidden");
+
+  const accuracy =
+    totalAnswered
+      ? Math.round(
+          (correct /
+            totalAnswered) *
+          100
+        )
+      : 100;
+
+  $("doneTitle").textContent =
+    `${accuracy}% accuracy`;
+
+  $("doneSub").textContent =
+    `You completed all ${deck.length} cards.`;
+
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+$("card").onclick =
+  flip;
+
+$("missBtn").onclick =
+  dontKnow;
+
+$("gotBtn").onclick =
+  knowIt;
+
+$("restart").onclick =
+  restart;
+
+$("restart2").onclick =
+  restart;
+
+
+$("newDeck").onclick =
+$("new2").onclick =
+  () => {
+
+    $("study")
+      .classList
+      .add("hidden");
+
+    $("setup")
+      .classList
+      .remove("hidden");
+
+  };
+
+
+/* =========================================================
+   KEYBOARD CONTROLS
+========================================================= */
+
+document.addEventListener(
+  "keydown",
+  e => {
+
+    if(
+      $("study")
+        .classList
+        .contains("hidden")
+    ){
+
+      return;
+
+    }
+
+    if(
+      $("playArea")
+        .classList
+        .contains("hidden")
+    ){
+
+      return;
+
+    }
+
+    /*
+      Space = flip
+    */
+
+    if(e.key === " "){
+
+      e.preventDefault();
+
+      flip();
+
+    }
+
+    /*
+      Left arrow = Don't know
+    */
+
+    else if(
+      e.key === "ArrowLeft"
+    ){
+
+      dontKnow();
+
+    }
+
+    /*
+      Right arrow = Know it
+      only after flipping.
+    */
+
+    else if(
+      e.key === "ArrowRight"
+    ){
+
+      if(flipped){
+
+        knowIt();
+
+      }
+
+    }
+
+  }
+);
+
 </script>
+
 </body>
 </html>
