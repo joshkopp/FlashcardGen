@@ -67,25 +67,17 @@ select.field{width:auto;height:46px;padding:0 12px}
 .stats h2{font-size:34px;margin:0 0 6px}
 .stats p{color:var(--muted);margin:0 0 6px}
 @media(max-width:720px){.hero{padding:50px 0 28px}.main-card{padding:16px}.privacy-pill{font-size:11px;max-width:210px;line-height:1.3}.card3d{padding:26px 18px}}
-.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:6px}
-.keybox{margin-top:12px;display:grid;gap:10px}
-.keyrow{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
-.mode{display:block;padding:14px 16px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:var(--bg);font-size:13px;line-height:1.5;color:var(--muted);transition:border-color .2s}
-.mode.on{border-color:var(--accent)}
-.mode b{display:block;color:var(--text);font-size:14px;margin-bottom:2px}
-.mode input{display:none}
 .btn.sm{height:36px;padding:0 14px}
 .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:14px}
 #stars{color:var(--accent);letter-spacing:2px}
 .ctx{margin-top:16px;font-size:13px;color:var(--muted);font-style:italic}
-@media(max-width:720px){.modes{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="glow"></div>
 <header><div class="wrap"><nav>
   <div class="brand">JK<span>.</span></div>
-  <div class="privacy-pill"><span class="privacy-dot"></span>Free · no account, no API key · runs in your browser</div>
+  <div class="privacy-pill"><span class="privacy-dot"></span>Powered by Gemini · your key stays on a private server</div>
 </nav></div></header>
 
 <div class="wrap">
@@ -97,18 +89,9 @@ select.field{width:auto;height:46px;padding:0 12px}
 
 <main class="main-card">
  <div id="setup">
-  <span class="label">How should the cards be made?</span>
-  <div class="modes">
-    <label class="mode on"><input type="radio" name="mode" value="smart" checked><b>Smart · instant</b>Scores every term by importance and builds definition and fill-in-the-blank cards. Works on any device, even offline.</label>
-    <label class="mode" id="aiMode"><input type="radio" name="mode" value="ai"><b>AI · on your device</b><span id="aiNote">A small AI model runs inside your browser. Free and private, but about 1 GB to download the first time. Needs desktop Chrome or Edge.</span></label>
-    <label class="mode"><input type="radio" name="mode" value="cloud"><b>Cloud AI · your own key</b>Best card quality. Uses a free Gemini, Groq, or OpenRouter key that stays in your browser. For personal use.</label>
-  </div>
-
-  <div class="keybox hidden" id="keybox">
-    <div class="keyrow"><select id="provider" class="field"><option value="gemini">Gemini (free tier)</option><option value="groq">Groq (free tier)</option><option value="openrouter">OpenRouter (free models)</option></select><input id="model" class="field" spellcheck="false" placeholder="model name"></div>
-    <input id="apikey" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your API key">
-    <p class="small" style="margin:0"><label><input type="checkbox" id="remember"> Remember on this device</label><br>Your key is saved only in this browser, never in the page's code. Free tiers can use what you send to improve their models, so only paste your own notes. Your account has to meet the provider's age rules.</p>
-  </div>
+  <label class="label" for="code">Access code</label>
+  <input id="code" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Your private access code">
+  <p class="small">Your text is sent to Google's Gemini through your own private server, so only paste your own notes.</p>
 
   <div class="section">
     <div class="tabs"><button class="tab on" data-tab="paste">Paste text</button><button class="tab" data-tab="upload">Upload file</button></div>
@@ -150,7 +133,7 @@ select.field{width:auto;height:46px;padding:0 12px}
 const $ = id => document.getElementById(id);
 $("year").textContent = new Date().getFullYear();
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-const MAX_CHARS = 200000;
+const MAX_CHARS = 120000;
 
 /* ---------- importance engine ---------- */
 const STOP = new Set("a an the and or but if then than that this these those of in on at to for from by with as is are was were be been being it its into over under about between during before after not no nor so such can could may might must shall should will would do does did have has had which who whom whose what when where why how also more most other some any each both few many much very just only own same too their there they them his her he she we you your our us".split(" "));
@@ -176,127 +159,31 @@ function analyze(text) {
   tf.forEach((c, t) => w.set(t, Math.log(1 + c) * (1 + .5 * Math.log(1 + sp.get(t))) * Math.min(boost.get(t) || 1, 2.5)));
   return { sents, w };
 }
-const sentScore = (s, w) => { const ws = words(s); return ws.length ? ws.reduce((a, x) => a + (w.get(x) || 0), 0) / Math.sqrt(ws.length) + (DEF.test(s) ? 2 : 0) : 0; };
 const termScore = (str, w) => { const v = words(str).map(x => w.get(x) || 0).sort((a, b) => b - a).slice(0, 3); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
-
-function toCard(s, sc, w) {
-  const m = s.match(DEF);
-  if (m && m[1].split(" ").length <= 6) {
-    const subj = m[1].replace(/^(the|a|an)\s+/i, "");
-    return { q: /^(is|are)$/.test(m[2]) ? `What ${m[2]} ${subj}?` : `Explain: ${subj}`, a: cap(m[3]), ctx: null, sc };
-  }
-  const best = (s.match(/[A-Za-z][A-Za-z'-]{3,}/g) || []).filter(x => !STOP.has(x.toLowerCase())).sort((a, b) => ((w.get(b.toLowerCase()) || 0) + Math.min(b.length, 12) * .1) - ((w.get(a.toLowerCase()) || 0) + Math.min(a.length, 12) * .1))[0];
-  if (!best) return null;
-  const blanked = s.replace(new RegExp("\\b" + best.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i"), "_____");
-  return { q: "Fill in the blank: " + blanked, a: best, ctx: s, sc };
-}
-
-function smartCards(text, n) {
-  const { sents, w } = analyze(text);
-  const scored = sents.map((s, i) => ({ s, i, sc: sentScore(s, w) })).sort((a, b) => b.sc - a.sc);
-  const picked = [];
-  for (const c of scored) {
-    if (picked.length >= n) break;
-    const cw = new Set(words(c.s));
-    const dup = picked.some(p => { const pw = new Set(words(p.s)); let k = 0; cw.forEach(x => pw.has(x) && k++); return k / Math.max(1, Math.min(cw.size, pw.size)) > .6; });
-    if (!dup) picked.push(c);
-  }
-  return picked.sort((a, b) => a.i - b.i).map(c => toCard(c.s, c.sc, w)).filter(Boolean);
-}
 
 function assignStars(cards) {                          // rank by importance: top 20% = 5 stars ... bottom 20% = 1 star
   cards.map((c, i) => i).sort((a, b) => cards[b].sc - cards[a].sc)
     .forEach((ci, r) => { cards[ci].stars = 5 - Math.min(4, Math.floor(r / cards.length * 5)); });
 }
-/* ---------- ai ---------- */
-const AI_SYS = `You write flashcards from study text. Reply with JSON only, in this shape: {"cards":[{"term":"key term","q":"question","a":"answer"}]}. Each card tests one key term or idea from the text. "term" is the key term (1-4 words). Questions must make sense on their own. Answers are at most 25 words. Use only facts found in the text.`;
-let engine = null;
-function setProg(p) { $("genProg").classList.remove("hidden"); $("genFill").style.width = Math.round(p * 100) + "%"; }
-
-async function getEngine() {
-  if (engine) return engine;
-  const webllm = await import("https://esm.run/@mlc-ai/web-llm");
-  const ids = webllm.prebuiltAppConfig.model_list.map(m => m.model_id);
-  const id = ids.find(i => /Qwen2\.5-1\.5B-Instruct-q4f16_1/.test(i)) || ids.find(i => /Llama-3\.2-1B-Instruct-q4f16_1/.test(i)) || ids.find(i => /(1B|1\.5B).*q4f16/i.test(i));
-  if (!id) throw new Error("No small model available.");
-  engine = await webllm.CreateMLCEngine(id, { initProgressCallback: p => { setStatus(p.text); setProg(p.progress || 0); } });
-  return engine;
-}
-function chunkSents(sents, size = 1800) {
-  const out = []; let cur = [], len = 0;
-  sents.forEach(s => { if (len + s.length > size && cur.length) { out.push(cur); cur = []; len = 0; } cur.push(s); len += s.length + 1; });
-  if (cur.length) out.push(cur);
-  return out;
-}
-async function aiCards(text, n) {
-  const eng = await getEngine(), { w } = analyze(text);
-  const score = c => c.reduce((a, s) => a + sentScore(s, w), 0);
-  let chunks = chunkSents(rawSents(text));
-  if (chunks.length > 12) {                            // keep the 12 most important sections
-    const keep = new Set(chunks.map((c, i) => ({ i, s: score(c) })).sort((a, b) => b.s - a.s).slice(0, 12).map(x => x.i));
-    chunks = chunks.filter((c, i) => keep.has(i));
-  }
-  const total = chunks.reduce((a, c) => a + score(c), 0) || 1, cards = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const k = Math.max(1, Math.min(5, Math.round(n * score(chunks[i]) / total)));   // more important sections get more cards
-    setStatus(`Writing cards: section ${i + 1} of ${chunks.length}...`); setProg(i / chunks.length);
-    try {
-      const r = await eng.chat.completions.create({ temperature: .2, max_tokens: 700, response_format: { type: "json_object" },
-        messages: [{ role: "system", content: AI_SYS }, { role: "user", content: `Write exactly ${k} flashcards from this text:\n\n${chunks[i].join(" ")}` }] });
-      (JSON.parse(r.choices[0].message.content).cards || []).forEach(c => {
-        if (c && c.q && c.a) cards.push({ q: String(c.q), a: String(c.a), ctx: null, sc: termScore(String(c.term || c.q), w) });
-      });
-    } catch (e) { /* skip a section the model garbled */ }
-  }
-  if (!cards.length) throw new Error("The AI returned no usable cards.");
-  return cards;
-}
-/* ---------- cloud AI (your own free key) ---------- */
-const PROVIDERS = {
-  gemini: { name: "Gemini", model: "gemini-3.5-flash-lite", max: 120000 },
-  groq: { name: "Groq", model: "openai/gpt-oss-120b", base: "https://api.groq.com/openai/v1", max: 18000 },
-  openrouter: { name: "OpenRouter", model: "openrouter/free", base: "https://openrouter.ai/api/v1", max: 40000 }
-};
+/* ---------- cloud AI through your Worker ---------- */
+const AI_URL = "https://YOUR-WORKER.workers.dev";   // <- paste your Worker's address here
 const CLOUD_SYS = `You write flashcards from study material. Reply with JSON only: {"cards":[{"term":"key term","q":"question","a":"answer"}]}. Each card tests one key term or idea. "term" is the key term (1-4 words). Questions must make sense on their own. Answers are at most 25 words. Use only facts from the material, spread across the whole text.`;
-function loadCloud() {
-  const s = JSON.parse(localStorage.getItem("jk_cloud") || sessionStorage.getItem("jk_cloud") || "{}");
-  if (s.provider) $("provider").value = s.provider;
-  $("model").value = s.model || PROVIDERS[$("provider").value].model;
-  $("apikey").value = s.key || ""; $("remember").checked = !!localStorage.getItem("jk_cloud");
-}
-function saveCloud() {
-  localStorage.removeItem("jk_cloud"); sessionStorage.removeItem("jk_cloud");
-  const v = JSON.stringify({ provider: $("provider").value, model: $("model").value.trim(), key: $("apikey").value.trim() });
-  ($("remember").checked ? localStorage : sessionStorage).setItem("jk_cloud", v);
-}
-$("provider").onchange = () => { $("model").value = PROVIDERS[$("provider").value].model; };
-loadCloud();
+$("code").value = localStorage.getItem("jk_code") || "";
 
 async function cloudCards(text, n) {
-  const p = $("provider").value, cfg = PROVIDERS[p], key = $("apikey").value.trim(), model = $("model").value.trim() || cfg.model;
-  if (!key) throw new Error("Paste your " + cfg.name + " API key first.");
-  saveCloud();
-  const body = text.slice(0, cfg.max), { w } = analyze(body);
-  setStatus("Asking " + cfg.name + "..." + (text.length > cfg.max ? " (using the first " + cfg.max.toLocaleString() + " characters)" : ""));
+  if (AI_URL.includes("YOUR-WORKER")) throw new Error("Set AI_URL near the top of the script to your Worker's address.");
+  const code = $("code").value.trim();
+  if (!code) throw new Error("Enter your access code first.");
+  localStorage.setItem("jk_code", code);
+  const body = text.slice(0, MAX_CHARS), { w } = analyze(body);
   const prompt = `Write ${n} flashcards from this material, covering the most important terms and ideas:\n\n${body}`;
-  let raw, r, d;
+  let r, d;
   try {
-    if (p === "gemini") {
-      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-        method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: CLOUD_SYS }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: .2, responseMimeType: "application/json" } }) });
-      d = await r.json().catch(() => ({}));
-      raw = (((d.candidates || [])[0] || {}).content || { parts: [] }).parts.map(x => x.text || "").join("");
-    } else {
-      r = await fetch(cfg.base + "/chat/completions", {
-        method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + key },
-        body: JSON.stringify({ model, temperature: .2, messages: [{ role: "system", content: CLOUD_SYS }, { role: "user", content: prompt }] }) });
-      d = await r.json().catch(() => ({}));
-      raw = (((d.choices || [])[0] || {}).message || {}).content || "";
-    }
-  } catch (e) { throw new Error("Couldn't reach " + cfg.name + ". Check your connection, or the provider may block browser requests."); }
-  if (!r.ok) { const m = d.error && (d.error.message || d.error); throw new Error(typeof m === "string" ? m : "Error " + r.status); }
-  const s = raw.replace(/```json|```/g, ""), a = s.indexOf("["), o = s.indexOf("{");
+    r = await fetch(AI_URL, { method: "POST", headers: { "content-type": "application/json", "x-access-code": code }, body: JSON.stringify({ system: CLOUD_SYS, prompt, json: true, maxTokens: 6000 }) });
+    d = await r.json().catch(() => ({}));
+  } catch (e) { throw new Error("Couldn't reach your server. Check AI_URL and that the Worker is deployed."); }
+  if (!r.ok) throw new Error(d.error || "Error " + r.status);
+  const s = (d.text || "").replace(/```json|```/g, ""), a = s.indexOf("["), o = s.indexOf("{");
   let arr;
   try {
     const j = JSON.parse(a >= 0 && (o < 0 || a < o) ? s.slice(a, s.lastIndexOf("]") + 1) : s.slice(o, s.lastIndexOf("}") + 1));
@@ -309,15 +196,6 @@ async function cloudCards(text, n) {
 /* ---------- end engine ---------- */
 
 function setStatus(msg, bad) { $("status").textContent = msg; $("status").className = bad ? "bad" : ""; }
-
-/* mode picker */
-const hasGPU = !!navigator.gpu;
-if (!hasGPU) { $("aiMode").style.opacity = .45; $("aiNote").textContent = "Not supported on this browser or device (needs WebGPU). Try desktop Chrome or Edge."; }
-document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = () => {
-  if (r.value === "ai" && !hasGPU) { document.querySelector('input[value=smart]').checked = true; }
-  document.querySelectorAll(".mode").forEach(m => m.classList.toggle("on", m.querySelector("input").checked));
-  $("keybox").classList.toggle("hidden", document.querySelector("input[name=mode]:checked").value !== "cloud");
-});
 
 /* input tabs + file reading */
 let fileText = "";
@@ -354,15 +232,10 @@ $("go").onclick = async () => {
   let text = ($("uploadPane").classList.contains("hidden") ? $("material").value : fileText).trim();
   if (text.length < 200) return setStatus("Add more material first (a few paragraphs).", true);
   text = text.slice(0, MAX_CHARS);
-  const mode = document.querySelector("input[name=mode]:checked").value, n = +$("count").value;
-  $("go").disabled = true; setStatus(mode === "ai" ? "Starting the on-device AI..." : mode === "cloud" ? "Asking the AI..." : "Scoring your material...");
+  const n = +$("count").value;
+  $("go").disabled = true; setStatus("Asking the AI...");
   try {
-    let cards;
-    if (mode === "cloud") cards = await cloudCards(text, n);
-    else if (mode === "ai") {
-      try { cards = await aiCards(text, n); }
-      catch (e) { setStatus("AI mode didn't work here (" + e.message + "). Using Smart mode instead.", true); cards = smartCards(text, n); }
-    } else cards = smartCards(text, n);
+    const cards = await cloudCards(text, n);
     if (!cards.length) throw new Error("Couldn't find enough material to build cards.");
     assignStars(cards); startDeck(cards); setStatus("");
   } catch (e) { setStatus(e.message, true); }
