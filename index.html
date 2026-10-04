@@ -77,7 +77,7 @@ select.field{width:auto;height:46px;padding:0 12px}
 <div class="glow"></div>
 <header><div class="wrap"><nav>
   <div class="brand">JK<span>.</span></div>
-  <div class="privacy-pill"><span class="privacy-dot"></span>Powered by Gemini · your key stays on a private server</div>
+  <div class="privacy-pill"><span class="privacy-dot"></span>Powered by Cloudflare AI · no API key needed</div>
 </nav></div></header>
 
 <div class="wrap">
@@ -91,7 +91,7 @@ select.field{width:auto;height:46px;padding:0 12px}
  <div id="setup">
   <label class="label" for="code">Access code</label>
   <input id="code" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="Your private access code">
-  <p class="small">Your text is sent to Google's Gemini through your own private server, so only paste your own notes.</p>
+  <p class="small">Your text is sent to Cloudflare's AI through your own private server, so only paste your own notes.</p>
 
   <div class="section">
     <div class="tabs"><button class="tab on" data-tab="paste">Paste text</button><button class="tab" data-tab="upload">Upload file</button></div>
@@ -165,10 +165,24 @@ function assignStars(cards) {                          // rank by importance: to
   cards.map((c, i) => i).sort((a, b) => cards[b].sc - cards[a].sc)
     .forEach((ci, r) => { cards[ci].stars = 5 - Math.min(4, Math.floor(r / cards.length * 5)); });
 }
-/* ---------- cloud AI through your Worker ---------- */
+/* ---------- cloud AI through your Worker (Cloudflare Workers AI) ---------- */
 const AI_URL = "https://YOUR-WORKER.workers.dev";   // <- paste your Worker's address here
-const CLOUD_SYS = `You write flashcards from study material. Reply with JSON only: {"cards":[{"term":"key term","q":"question","a":"answer"}]}. Each card tests one key term or idea. "term" is the key term (1-4 words). Questions must make sense on their own. Answers are at most 25 words. Use only facts from the material, spread across the whole text.`;
+const CLOUD_SYS = `You write flashcards from study text. Reply with JSON only, no other text: {"cards":[{"term":"key term","q":"question","a":"answer"}]}. Each card tests one key term or idea. "term" is the key term (1-4 words). Questions must make sense on their own. Answers are at most 25 words. Use only facts from the text.`;
+const MAX_SECTIONS = 6;
 $("code").value = localStorage.getItem("jk_code") || "";
+
+function chunkText(t, size = 5000) {                  // small free models, so work in small sections
+  const parts = t.replace(/\r/g, "").split(/\n\s*\n|(?<=[.!?])\s+/), out = [];
+  let cur = "";
+  parts.forEach(p => { if (cur && (cur + " " + p).length > size) { out.push(cur); cur = ""; } cur = cur ? cur + " " + p : p; });
+  if (cur) out.push(cur);
+  return out.map(c => c.slice(0, size + 1000));
+}
+function parseCards(raw) {
+  const s = raw.replace(/```json|```/g, ""), a = s.indexOf("["), o = s.indexOf("{");
+  const j = JSON.parse(a >= 0 && (o < 0 || a < o) ? s.slice(a, s.lastIndexOf("]") + 1) : s.slice(o, s.lastIndexOf("}") + 1));
+  return (Array.isArray(j) ? j : j.cards) || [];
+}
 
 async function cloudCards(text, n) {
   if (AI_URL.includes("YOUR-WORKER")) throw new Error("Set AI_URL near the top of the script to your Worker's address.");
@@ -176,21 +190,29 @@ async function cloudCards(text, n) {
   if (!code) throw new Error("Enter your access code first.");
   localStorage.setItem("jk_code", code);
   const body = text.slice(0, MAX_CHARS), { w } = analyze(body);
-  const prompt = `Write ${n} flashcards from this material, covering the most important terms and ideas:\n\n${body}`;
-  let r, d;
-  try {
-    r = await fetch(AI_URL, { method: "POST", headers: { "content-type": "application/json", "x-access-code": code }, body: JSON.stringify({ system: CLOUD_SYS, prompt, json: true, maxTokens: 6000 }) });
-    d = await r.json().catch(() => ({}));
-  } catch (e) { throw new Error("Couldn't reach your server. Check AI_URL and that the Worker is deployed."); }
-  if (!r.ok) throw new Error(d.error || "Error " + r.status);
-  const s = (d.text || "").replace(/```json|```/g, ""), a = s.indexOf("["), o = s.indexOf("{");
-  let arr;
-  try {
-    const j = JSON.parse(a >= 0 && (o < 0 || a < o) ? s.slice(a, s.lastIndexOf("]") + 1) : s.slice(o, s.lastIndexOf("}") + 1));
-    arr = Array.isArray(j) ? j : j.cards;
-  } catch (e) { throw new Error("Couldn't read the AI's response. Try again."); }
-  const cards = (arr || []).filter(c => c && c.q && c.a).map(c => ({ q: String(c.q), a: String(c.a), ctx: null, sc: termScore(String(c.term || c.q), w) }));
-  if (!cards.length) throw new Error("No cards came back.");
+  let chunks = chunkText(body);
+  if (chunks.length > MAX_SECTIONS)                    // keep sections spread across the whole document
+    chunks = Array.from({ length: MAX_SECTIONS }, (_, i) => chunks[Math.round(i * (chunks.length - 1) / (MAX_SECTIONS - 1))]);
+  const per = Math.max(2, Math.min(6, Math.round(n / chunks.length)));
+  let cards = [], lastErr = "";
+  for (let i = 0; i < chunks.length; i++) {
+    setStatus(`Writing cards: section ${i + 1} of ${chunks.length}...`);
+    let r, d;
+    try {
+      r = await fetch(AI_URL, { method: "POST", headers: { "content-type": "application/json", "x-access-code": code },
+        body: JSON.stringify({ system: CLOUD_SYS, prompt: `Write ${per} flashcards from this text:\n\n${chunks[i]}`, maxTokens: 900 }) });
+      d = await r.json().catch(() => ({}));
+    } catch (e) { throw new Error("Couldn't reach your server. Check AI_URL and that the Worker is deployed."); }
+    if (!r.ok) {
+      if ([401, 403, 429].includes(r.status)) throw new Error(d.error || "Error " + r.status);   // stop on auth or quota problems
+      lastErr = d.error || "Error " + r.status; continue;
+    }
+    try {
+      parseCards(d.text || "").forEach(c => { if (c && c.q && c.a) cards.push({ q: String(c.q), a: String(c.a), ctx: null, sc: termScore(String(c.term || c.q), w) }); });
+    } catch (e) { lastErr = "Couldn't read the AI's response."; }
+  }
+  if (!cards.length) throw new Error(lastErr || "No cards came back.");
+  if (cards.length > n) cards = cards.sort((a, b) => b.sc - a.sc).slice(0, n);   // keep the most important ones
   return cards;
 }
 /* ---------- end engine ---------- */
