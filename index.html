@@ -166,7 +166,7 @@ function assignStars(cards) {                          // rank by importance: to
     .forEach((ci, r) => { cards[ci].stars = 5 - Math.min(4, Math.floor(r / cards.length * 5)); });
 }
 /* ---------- cloud AI through your Worker (Cloudflare Workers AI) ---------- */
-const AI_URL = "https://YOUR-WORKER.workers.dev";   // <- paste your Worker's address here
+const AI_URL = "https://jk-flashcards-ai.josh-koppanalil.workers.dev";   // <- paste your Worker's address here
 const CLOUD_SYS = `You write flashcards from study text. Reply with JSON only, no other text: {"cards":[{"term":"key term","q":"question","a":"answer"}]}. Each card tests one key term or idea. "term" is the key term (1-4 words). Questions must make sense on their own. Answers are at most 25 words. Use only facts from the text.`;
 const MAX_SECTIONS = 6;
 $("code").value = localStorage.getItem("jk_code") || "";
