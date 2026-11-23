@@ -3,25 +3,25 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#09090b">
+<meta name="theme-color" content="#0b1a2e">
 
-<title>JK Flashcard Generator</title>
+<title>Flashcard Generator · Josh Koppanalil</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="https://joshkoppanalil.com/favicon.svg" type="image/svg+xml">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
 <style>
 :root{
-  --bg:#09090b;
-  --panel:#111114;
-  --text:#f4f4f5;
-  --muted:#a1a1aa;
-  --line:#27272a;
-  --accent:#b8f36b;
+  --bg:#0b1a2e;
+  --panel:#0f2239;
+  --text:#f4f8fc;
+  --muted:#8aa3bd;
+  --line:#1d3a5a;
+  --accent:#4fd1ff;
   --danger:#f28d8d;
   --max:1080px;
 }
@@ -49,7 +49,7 @@ body{
   width:420px;
   height:420px;
   border-radius:50%;
-  background:#9be34a;
+  background:#2bb3e6;
   filter:blur(150px);
   opacity:.10;
   right:2%;
@@ -106,7 +106,7 @@ nav{
   height:7px;
   border-radius:50%;
   background:var(--accent);
-  box-shadow:0 0 8px rgba(184,243,107,.55);
+  box-shadow:0 0 8px rgba(79,209,255,.55);
 }
 
 .hero{
@@ -181,7 +181,7 @@ textarea.field{
 
 .field:focus{
   border-color:var(--accent);
-  box-shadow:0 0 0 4px rgba(184,243,107,.07);
+  box-shadow:0 0 0 4px rgba(79,209,255,.07);
 }
 
 .field::placeholder{
@@ -353,11 +353,11 @@ select.field{
 }
 
 .card3d.back{
-  border-color:rgba(184,243,107,.4);
+  border-color:rgba(79,209,255,.4);
   background:radial-gradient(
     ellipse at top right,
     #20251a 0%,
-    #111114 60%
+    #0f2239 60%
   );
 }
 
@@ -440,6 +440,8 @@ select.field{
   }
 }
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://joshkoppanalil.com/assets/blueprint.css">
 </head>
 
 <body>
@@ -449,7 +451,7 @@ select.field{
 <header>
   <div class="wrap">
     <nav>
-      <div class="brand">JK<span>.</span></div>
+      <a class="brand jk-logo" href="https://joshkoppanalil.com/" aria-label="Josh Koppanalil, home"><svg class="jk-mark" viewBox="0 0 64 64" aria-hidden="true"><rect x="1" y="1" width="62" height="62" rx="14" fill="#0b1a2e" stroke="#4fd1ff" stroke-opacity=".45"/><path d="M8 8h6M8 8v6M56 8h-6M56 8v6M8 56h6M8 56v-6M56 56h-6M56 56v-6" stroke="#4fd1ff" stroke-opacity=".5" stroke-width="1.5" fill="none"/><path d="M27 15v24a7.5 7.5 0 0 1-15 0" fill="none" stroke="#f4f8fc" stroke-width="5" stroke-linecap="round"/><path d="M27 33L46 15M33 27.3L46 49" fill="none" stroke="#4fd1ff" stroke-width="5" stroke-linecap="round"/><circle cx="33" cy="27.3" r="3.7" fill="#ff6b35"/></svg><span>Josh Koppanalil</span></a>
 
       <div class="privacy-pill">
         <span class="privacy-dot"></span>
